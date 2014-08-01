@@ -462,6 +462,7 @@ class Klarna {
 		);
 
 		$this->xmlrpc->request_charset_encoding = 'ISO-8859-1';
+		$this->xmlrpc->setSSLVerifyHost(2);
 	}
 
 	/**
