@@ -55,7 +55,7 @@ class BixKlarnahelper {
 		$this->_sharedSecret = BixTools::config('algemeen.betalen.bix_klarna.sharedSecret', '');
 		$testSetting = BixTools::config('algemeen.betalen.bix_klarna.test', 0);
 		$this->_server = !empty($testSetting) ? Klarna::BETA : Klarna::LIVE;
-//		Klarna::$debug = true;
+		Klarna::$debug = true;
 		if (empty($this->_eid) || empty($this->_sharedSecret) || empty($this->transaction_id)) {
 			throw new BixKlarnaExeption(JText::_('COM_BIXPRINTSHOP_PLUGIN_BIX_KLARNA_BETAALINFO_INCOMPLEET'));
 		}
@@ -86,7 +86,7 @@ class BixKlarnahelper {
 	 */
 	public function doSetup ($checkoutData) {
 		$k = $this->_getKlarna();
-
+pr($checkoutData);
 		foreach ($checkoutData['orders'] as $order) {
 			$k->addArticle(
 				$order['quantity'], // Quantity

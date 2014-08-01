@@ -147,7 +147,7 @@ class plgBixprintshopBix_klarna extends BPSBetaalplugin {
 //			'push_uri' => $pushUrl,
 //			'bestelID' => $bixCart->get('bestelID', 0),
 		$checkoutData = array(
-			'klantID' => '19780225',//$bixCart->frontUser->getValue('debiteurnummer', $bixCart->frontUser->id),
+			'klantID' => '19780225', //$bixCart->frontUser->getValue('debiteurnummer', $bixCart->frontUser->id),
 			'orders' => array(),
 			'bill_address' => array(),
 			'ship_address' => array()
@@ -159,62 +159,62 @@ class plgBixprintshopBix_klarna extends BPSBetaalplugin {
 			$oplageAttrib = $bixOrder->attribClasses[$bixOrder->getAttribNameByType('oplage')];
 			$oplageTotaal = $oplageAttrib->get('orderValue');
 
-			$aOrderParams = (array)$bixOrder->get('params',array());
-			$prodCode =  (!empty($aOrderParams['productCode'])) ? $aOrderParams['productCode']: $orderID;
+			$aOrderParams = (array)$bixOrder->get('params', array());
+			$prodCode = (!empty($aOrderParams['productCode'])) ? $aOrderParams['productCode'] : $orderID;
 
 			$checkoutData['orders'][] = array(
-				'quantity'=>$oplageTotaal,          // Quantity
-				'sku'=>$prodCode,             // Article number
-				'name'=>$bixOrder->get('productNaam'),      // Article name/title
-				'price'=>$bixOrder->get('orderBruto'),                 // Price
-				'vat'=>($btwTarieven[$bixOrder->getBtwType()]*100),                     //  VAT
-				'discount'=>0,                      // Discount todo
-				'flags'=>KlarnaFlags::INC_VAT    // Price is including VAT.
+				'quantity' => $oplageTotaal, // Quantity
+				'sku' => $prodCode, // Article number
+				'name' => $bixOrder->get('productNaam'), // Article name/title
+				'price' => $bixOrder->get('orderBruto'), // Price
+				'vat' => ($btwTarieven[$bixOrder->getBtwType()] * 100), //  VAT
+				'discount' => 0, // Discount todo
+				'flags' => KlarnaFlags::INC_VAT // Price is including VAT.
 			);
 
 		}
 		//administratiekosten
 		$checkoutData['orders'][] = array(
-			'quantity'=>1,          // Quantity
-			'sku'=>'klarna',             // Article number
-			'name'=>JText::_('COM_BIXPRINTSHOP_PLUGIN_BIX_KLARNA_ADMINKOSTEN_DESC'),      // Article name/title
-			'price'=>($bixCart->get('administratiePrijs') + $bixCart->get('administratieBtw')),                 // Price
-			'vat'=>($btwTarieven[$bixCart->getAdminBtwType()]*100),                     //  VAT
-			'discount'=>0,                      // Discount
-			'flags'=>KlarnaFlags::INC_VAT | KlarnaFlags::IS_HANDLING   // Price is including VAT.
+			'quantity' => 1, // Quantity
+			'sku' => 'klarna', // Article number
+			'name' => JText::_('COM_BIXPRINTSHOP_PLUGIN_BIX_KLARNA_ADMINKOSTEN_DESC'), // Article name/title
+			'price' => round(($bixCart->get('administratiePrijs') + $bixCart->get('administratieBtw')),2), // Price
+			'vat' => ($btwTarieven[$this->transactieBtw()] * 100), //  VAT
+			'discount' => 0, // Discount
+			'flags' => KlarnaFlags::INC_VAT | KlarnaFlags::IS_HANDLING // Price is including VAT.
 		);
 		//adressen
 		$adresRow = BixTools::getItem('adres', $bixCart->get('factuurAdresID', 0));
 		$adresObj = BixTools::getBixAdres($adresRow);
 		$naamArr = $adresObj->seperateName();
 		$checkoutData['bill_address'] = array(
-			'email'=>$bixCart->frontUser->getValue('email', ''),
-			'telefoon'=>$bixCart->frontUser->getValue('telefoon', '-'),
-			'mobiel'=>$adresObj->get('telefoon'),
-			'voornaam'=>$naamArr['voornaam'],
-			'achternaam'=>$naamArr['achternaam'],
-			'straat'=>$adresObj->get('straat'),
-			'postcode'=>$adresObj->get('postcode'),
-			'plaats'=>$adresObj->get('plaats'),
-			'land'=>KlarnaCountry::NL,
-			'huisnr'=>$adresObj->get('huisnummer'),
-			'huisnr_toev'=>$adresObj->get('huisnummer_toevoeging')
+			'email' => $bixCart->frontUser->getValue('email', ''),
+			'telefoon' => $bixCart->frontUser->getValue('telefoon', '-'),
+			'mobiel' => $adresObj->get('telefoon'),
+			'voornaam' => $naamArr['voornaam'],
+			'achternaam' => $naamArr['achternaam'],
+			'straat' => $adresObj->get('straat'),
+			'postcode' => $adresObj->get('postcode'),
+			'plaats' => $adresObj->get('plaats'),
+			'land' => KlarnaCountry::NL,
+			'huisnr' => $adresObj->get('huisnummer'),
+			'huisnr_toev' => $adresObj->get('huisnummer_toevoeging')
 		);
 		$adresRow = BixTools::getItem('adres', $bixCart->get('verzendAdresID', 0));
 		$adresObj = BixTools::getBixAdres($adresRow);
 		$naamArr = $adresObj->seperateName();
 		$checkoutData['ship_address'] = array(
-			'email'=>$bixCart->frontUser->getValue('email', ''),
-			'telefoon'=>$bixCart->frontUser->getValue('telefoon', ''),
-			'mobiel'=>$adresObj->get('telefoon'),
-			'voornaam'=>$naamArr['voornaam'],
-			'achternaam'=>$naamArr['achternaam'],
-			'straat'=>$adresObj->get('straat'),
-			'postcode'=>$adresObj->get('postcode'),
-			'plaats'=>$adresObj->get('plaats'),
-			'land'=>KlarnaCountry::NL,
-			'huisnr'=>$adresObj->get('huisnummer'),
-			'huisnr_toev'=>$adresObj->get('huisnummer_toevoeging')
+			'email' => $bixCart->frontUser->getValue('email', ''),
+			'telefoon' => $bixCart->frontUser->getValue('telefoon', ''),
+			'mobiel' => $adresObj->get('telefoon'),
+			'voornaam' => $naamArr['voornaam'],
+			'achternaam' => $naamArr['achternaam'],
+			'straat' => $adresObj->get('straat'),
+			'postcode' => $adresObj->get('postcode'),
+			'plaats' => $adresObj->get('plaats'),
+			'land' => KlarnaCountry::NL,
+			'huisnr' => $adresObj->get('huisnummer'),
+			'huisnr_toev' => $adresObj->get('huisnummer_toevoeging')
 		);
 
 		try {
@@ -234,7 +234,7 @@ class plgBixprintshopBix_klarna extends BPSBetaalplugin {
 			$paymentInfo->success = false;
 			$paymentInfo->valid = false;
 			$paymentInfo->message = $e->getMessage();
-pr($e);
+			pr($e->getMessage());
 			return array('pluginName' => $this->pluginName, 'paymentInfo' => $paymentInfo);
 		}
 		//echo $formHtml;
