@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<extension type="plugin" group="bixprintshop_betaal" version="1.6.0" method="upgrade">
+    <name>BixPrintshop Betalen - Klarna</name>
+    <author>Matthijs Alles</author>
+    <creationDate>jul 2014</creationDate>
+    <copyright>Copyright (C)2014 Bixie. All rights reserved.</copyright>
+    <license>http://www.gnu.org/licenses/gpl-2.0.html GNU/GPL</license>
+    <authorUrl>www.bixie.nl</authorUrl>
+    <version>1.0.0.0</version>
+    <description>COM_BIXPRINTSHOP_PLG_BIX_KLARNA_DESCR</description>
+    <scriptfile>install.script.php</scriptfile>
+    <files>
+        <filename plugin="bix_klarna">bix_klarna.php</filename>
+        <filename>klarnahelper.php</filename>
+        <filename>index.html</filename>
+        <folder>assets/</folder>
+        <folder>src/</folder>
+        <folder>form/</folder>
+    </files>
+    <languages>
+        <language tag="nl-NL">language/nl-NL/nl-NL.plg_bixprintshop_betaal_bix_klarna.ini</language>
+        <language tag="nl-NL">language/nl-NL/nl-NL.plg_bixprintshop_betaal_bix_klarna.sys.ini</language>
+    </languages>
+
+    <config>
+    </config>
+</extension>
