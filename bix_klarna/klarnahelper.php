@@ -55,19 +55,17 @@ class BixKlarnahelper {
 		$this->_sharedSecret = BixTools::config('algemeen.betalen.bix_klarna.sharedSecret', '');
 		$testSetting = BixTools::config('algemeen.betalen.bix_klarna.test', 0);
 		$this->_server = !empty($testSetting) ? Klarna::BETA : Klarna::LIVE;
+//		Klarna::$debug = true;
 		if (empty($this->_eid) || empty($this->_sharedSecret) || empty($this->transaction_id)) {
 			throw new BixKlarnaExeption(JText::_('COM_BIXPRINTSHOP_PLUGIN_BIX_KLARNA_BETAALINFO_INCOMPLEET'));
 		}
 	}
 
 	/**
-	 * @param array $checkoutData
-	 * @throws BixKlarnaExeption
-	 * @return string html form
+	 * @return Klarna
 	 */
-	public function doSetup ($checkoutData) {
+	protected function _getKlarna () {
 		$k = new Klarna();
-
 		$k->config(
 			$this->_eid, // Merchant ID
 			$this->_sharedSecret, // Shared secret
@@ -78,18 +76,81 @@ class BixKlarnahelper {
 			'json', // PClass storage
 			'./pclasses.json' // PClass storage URI path
 		);
+		return $k;
+	}
 
+	/**
+	 * @param array $checkoutData
+	 * @throws BixKlarnaExeption
+	 * @return string html form
+	 */
+	public function doSetup ($checkoutData) {
+		$k = $this->_getKlarna();
+
+		foreach ($checkoutData['orders'] as $order) {
+			$k->addArticle(
+				$order['quantity'], // Quantity
+				$order['sku'], // Article number
+				$order['name'], // Article name/title
+				$order['price'], // Price
+				$order['vat'], // 25% VAT
+				$order['discount'], // Discount
+				$order['flags'] // Price is including VAT.
+			);
+		}
+		$adresData = $checkoutData['bill_address'];
+		$addr = new KlarnaAddr(
+			$adresData['email'], // Email address
+			$adresData['telefoon'], // Telephone number, only one phone number is needed
+			$adresData['mobiel'], // Cell phone number
+			$adresData['voornaam'], // First name (given name)
+			$adresData['achternaam'], // Last name (family name)
+			'', // No care of, C/O
+			$adresData['straat'], // Street address
+			$adresData['postcode'], // Zip code
+			$adresData['plaats'], // City
+			$adresData['land'], // Country
+			$adresData['huisnr'], // House number (AT/DE/NL only)
+			$adresData['huisnr_toev'] // House extension (NL only)
+		);
+		$k->setAddress(KlarnaFlags::IS_BILLING, $addr);
+
+		$adresData = $checkoutData['ship_address'];
+		$addr = new KlarnaAddr(
+			$adresData['email'], // Email address
+			$adresData['telefoon'], // Telephone number, only one phone number is needed
+			$adresData['mobiel'], // Cell phone number
+			$adresData['voornaam'], // First name (given name)
+			$adresData['achternaam'], // Last name (family name)
+			'', // No care of, C/O
+			$adresData['straat'], // Street address
+			$adresData['postcode'], // Zip code
+			$adresData['plaats'], // City
+			$adresData['land'], // Country
+			$adresData['huisnr'], // House number (AT/DE/NL only)
+			$adresData['huisnr_toev'] // House extension (NL only)
+		);
+		$k->setAddress(KlarnaFlags::IS_SHIPPING, $addr);
 
 		try {
-			$k->fetchPClasses();
+			$result = $k->reserveAmount(
+				$checkoutData['klantID'], // PNO (Date of birth for AT/DE/NL)
+				null, // KlarnaFlags::MALE, KlarnaFlags::FEMALE (AT/DE/NL only)
+				-1,   // Automatically calculate and reserve the cart total amount
+				KlarnaFlags::NO_FLAG,
+				KlarnaPClass::INVOICE
+			);
 
-			$pclasses = $k->getAllPClasses();
+//			$rno = $result[0];
+//			$status = $result[1];
+//			echo "OK: reservation {$rno} - order status {$status}\n";
 
-			pr($pclasses);
-		} catch (Exception $e) {
-			echo "{$e->getMessage()} (#{$e->getCode()})\n";
+			// $status is KlarnaFlags::PENDING or KlarnaFlags::ACCEPTED.
+
+			return $result;
+		} catch(Exception $e) {
+			throw new BixKlarnaExeption($e->getMessage(),$e->getCode());
 		}
-
 	}
 
 	/**
