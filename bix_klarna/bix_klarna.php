@@ -98,6 +98,14 @@ class plgBixprintshopBix_klarna extends BPSBetaalplugin {
 			$betaalValidation['betaalmethodeText'] = JText::_('COM_BIXPRINTSHOP_BIX_KLARNA_REKENING_NIET_TOEGESTAAN', true);
 			$betaalValidation['allowed'] = false;
 		}
+		//land
+		$adresRow = BixTools::getItem('adres', $bixCart->get('factuurAdresID', 0));
+		$adresObj = BixTools::getBixAdres($adresRow);
+		if ($adresObj->get('land') != 'NL') {
+			$betaalValidation['message'] = JText::_('COM_BIXPRINTSHOP_PLUGIN_BIX_KLARNA_NIET_TOEGESTAAN_LAND', true);
+			$betaalValidation['betaalmethodeText'] = JText::_('COM_BIXPRINTSHOP_BIX_KLARNA_REKENING_NIET_TOEGESTAAN_LAND', true);
+			$betaalValidation['allowed'] = false;
+		}
 		if ($bixCart->get('totaalNetto') == 0) {
 			$betaalValidation['message'] = JText::_('COM_BIXPRINTSHOP_PLUGIN_BETAAL_ORDER_NUL', true);
 			$betaalValidation['allowed'] = false;
@@ -123,29 +131,97 @@ class plgBixprintshopBix_klarna extends BPSBetaalplugin {
 
 		//init vars
 		$transaction_id = uniqid('klarna');
-		$adresRow = BixTools::getItem('adres', $bixCart->get('factuurAdresID', 0));
-		$factuurAdres = BixTools::getBixAdres($adresRow);
-		$beschrijving = JText::sprintf('COM_BIXPRINTSHOP_CONFIG_BETALEN_BIX_KLARNA_TRANSACTION_DESC_SPR', $bixCart->get('factuurNummer', ''), $bixCart->get('bestelID', ''), JFactory::getApplication()->getCfg('sitename'));
-		$uri = JURI::getInstance();
-		$prot = BixTools::config('algemeen.betalen.bix_klarna.useSecure', 1) ? 'https://' : 'http://';
-		$siteRoot = $prot . $uri->toString(array('host', 'port'));
-		$cartItemid = BixTools::config('algemeen.cartItemid', 0) ? '&Itemid=' . BixTools::config('algemeen.cartItemid', 0) : '';
-		$returnUrl = $siteRoot . '/index.php?option=com_bixprintshop&task=cart.betaalreturn';
-		$pushUrl = $siteRoot . '/index.php?option=com_bixprintshop&task=cart.betaalpush';
-		$failUrl = $siteRoot . '/' . JRoute::_('index.php?option=com_bixprintshop&view=cart' . $cartItemid);
+//		$uri = JURI::getInstance();
+//		$prot = BixTools::config('algemeen.betalen.bix_klarna.useSecure', 1) ? 'https://' : 'http://';
+//		$siteRoot = $prot . $uri->toString(array('host', 'port'));
+//		$cartItemid = BixTools::config('algemeen.cartItemid', 0) ? '&Itemid=' . BixTools::config('algemeen.cartItemid', 0) : '';
+//		$beschrijving = JText::sprintf('COM_BIXPRINTSHOP_CONFIG_BETALEN_BIX_KLARNA_TRANSACTION_DESC_SPR', $bixCart->get('factuurNummer', ''), $bixCart->get('bestelID', ''), JFactory::getApplication()->getCfg('sitename'));
+//		$returnUrl = $siteRoot . '/index.php?option=com_bixprintshop&task=cart.betaalreturn';
+//		$pushUrl = $siteRoot . '/index.php?option=com_bixprintshop&task=cart.betaalpush';
+//		$failUrl = $siteRoot . '/' . JRoute::_('index.php?option=com_bixprintshop&view=cart' . $cartItemid);
 
+//		'amount' => ($paymentInfo->amount * 100),
+//			'terms_uri' => $siteRoot . '/index.php?Itemid=' . BixTools::config('algemeen.voorwaardenItemid', 101),
+//			'checkout_uri' => $failUrl,
+//			'confirmation_uri' => $returnUrl,
+//			'push_uri' => $pushUrl,
+//			'bestelID' => $bixCart->get('bestelID', 0),
 		$checkoutData = array(
-			'amount' => ($paymentInfo->amount * 100),
-			'terms_uri' => $siteRoot . '/index.php?Itemid=' . BixTools::config('algemeen.voorwaardenItemid', 101),
-			'checkout_uri' => $failUrl,
-			'confirmation_uri' => $returnUrl,
-			'push_uri' => $pushUrl,
-			'bestelID' => $bixCart->get('bestelID', 0)
+			'klantID' => '19780225',//$bixCart->frontUser->getValue('debiteurnummer', $bixCart->frontUser->id),
+			'orders' => array(),
+			'bill_address' => array(),
+			'ship_address' => array()
 		);
+		$btwTarieven = BixTools::getBTW();
+		foreach ($bixCart->get('orders') as $orderID) {
+			$bixOrder = $bixCart->getBixOrder($orderID);
+
+			$oplageAttrib = $bixOrder->attribClasses[$bixOrder->getAttribNameByType('oplage')];
+			$oplageTotaal = $oplageAttrib->get('orderValue');
+
+			$aOrderParams = (array)$bixOrder->get('params',array());
+			$prodCode =  (!empty($aOrderParams['productCode'])) ? $aOrderParams['productCode']: $orderID;
+
+			$checkoutData['orders'][] = array(
+				'quantity'=>$oplageTotaal,          // Quantity
+				'sku'=>$prodCode,             // Article number
+				'name'=>$bixOrder->get('productNaam'),      // Article name/title
+				'price'=>$bixOrder->get('orderBruto'),                 // Price
+				'vat'=>($btwTarieven[$bixOrder->getBtwType()]*100),                     //  VAT
+				'discount'=>0,                      // Discount todo
+				'flags'=>KlarnaFlags::INC_VAT    // Price is including VAT.
+			);
+
+		}
+		//administratiekosten
+		$checkoutData['orders'][] = array(
+			'quantity'=>1,          // Quantity
+			'sku'=>'klarna',             // Article number
+			'name'=>JText::_('COM_BIXPRINTSHOP_PLUGIN_BIX_KLARNA_ADMINKOSTEN_DESC'),      // Article name/title
+			'price'=>($bixCart->get('administratiePrijs') + $bixCart->get('administratieBtw')),                 // Price
+			'vat'=>($btwTarieven[$bixCart->getAdminBtwType()]*100),                     //  VAT
+			'discount'=>0,                      // Discount
+			'flags'=>KlarnaFlags::INC_VAT | KlarnaFlags::IS_HANDLING   // Price is including VAT.
+		);
+		//adressen
+		$adresRow = BixTools::getItem('adres', $bixCart->get('factuurAdresID', 0));
+		$adresObj = BixTools::getBixAdres($adresRow);
+		$naamArr = $adresObj->seperateName();
+		$checkoutData['bill_address'] = array(
+			'email'=>$bixCart->frontUser->getValue('email', ''),
+			'telefoon'=>$bixCart->frontUser->getValue('telefoon', '-'),
+			'mobiel'=>$adresObj->get('telefoon'),
+			'voornaam'=>$naamArr['voornaam'],
+			'achternaam'=>$naamArr['achternaam'],
+			'straat'=>$adresObj->get('straat'),
+			'postcode'=>$adresObj->get('postcode'),
+			'plaats'=>$adresObj->get('plaats'),
+			'land'=>KlarnaCountry::NL,
+			'huisnr'=>$adresObj->get('huisnummer'),
+			'huisnr_toev'=>$adresObj->get('huisnummer_toevoeging')
+		);
+		$adresRow = BixTools::getItem('adres', $bixCart->get('verzendAdresID', 0));
+		$adresObj = BixTools::getBixAdres($adresRow);
+		$naamArr = $adresObj->seperateName();
+		$checkoutData['ship_address'] = array(
+			'email'=>$bixCart->frontUser->getValue('email', ''),
+			'telefoon'=>$bixCart->frontUser->getValue('telefoon', ''),
+			'mobiel'=>$adresObj->get('telefoon'),
+			'voornaam'=>$naamArr['voornaam'],
+			'achternaam'=>$naamArr['achternaam'],
+			'straat'=>$adresObj->get('straat'),
+			'postcode'=>$adresObj->get('postcode'),
+			'plaats'=>$adresObj->get('plaats'),
+			'land'=>KlarnaCountry::NL,
+			'huisnr'=>$adresObj->get('huisnummer'),
+			'huisnr_toev'=>$adresObj->get('huisnummer_toevoeging')
+		);
+
 		try {
 			$bixKlarna = new BixKlarnahelper($transaction_id);
-			$formHtml = $bixKlarna->doSetup($checkoutData);
-
+			$orderInfo = $bixKlarna->doSetup($checkoutData);
+			pr($orderInfo);
+			$formHtml = '';
 			$paymentInfo->statusCode = 200;
 			$paymentInfo->statusMessage = 'Klarna betaling voorbereid';
 			$paymentInfo->success = true;
@@ -153,12 +229,12 @@ class plgBixprintshopBix_klarna extends BPSBetaalplugin {
 			$paymentInfo->message = JText::_('COM_BIXPRINTSHOP_PLUGIN_BIX_KLARNA_PREPARED');
 
 		} catch (BixKlarnaExeption $e) {
-			$paymentInfo->statusCode = 500;
-			$paymentInfo->statusMessage = 'iDEAL betaling mislukt';
+			$paymentInfo->statusCode = $e->getCode();
+			$paymentInfo->statusMessage = 'Klarna betaling mislukt';
 			$paymentInfo->success = false;
 			$paymentInfo->valid = false;
 			$paymentInfo->message = $e->getMessage();
-
+pr($e);
 			return array('pluginName' => $this->pluginName, 'paymentInfo' => $paymentInfo);
 		}
 		//echo $formHtml;
